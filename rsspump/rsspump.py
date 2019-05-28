@@ -1,12 +1,12 @@
-""" Utility functions for scraping large numbers of RSS feeds, handles extracting info from multiple feeds, cleaning
-    and returning that data in a DB ready schema/format for me.
-    Add; url, fetch function, raw, processed (on call?) and separate timestamp querying.
-    General principle; one pump per source!
-    Can get source metadata from parser 'feed' """
+"""
+Utility functions for scraping large numbers of RSS feeds, handles extracting info from multiple feeds, cleaning
+and returning that data in a DB ready schema/format for me.
+Add; url, fetch function, raw, processed (on call?) and separate timestamp querying.
+General principle; one pump per source!
+Can get source metadata from parser 'feed'.
+"""
 
 import feedparser
-import spacy
-import numpy as np
 from datetime import datetime
 
 # Load the english language model for SpaCy
@@ -16,7 +16,7 @@ nlp = en_core_web_sm.load()
 
 class RSSPump:
     """ Instantiates a pump for a single RSS feed, connecting, downloading and parsing the text and entities from it."""
-    def __init__(self, source_url, instantiate_run=False):
+    def __init__(self, source_url):
         self.source_url = source_url
         self.feed_object = feedparser.parse(self.source_url)
         self.corpus = self.get_stories()
@@ -29,16 +29,16 @@ class RSSPump:
         try:
             if len(self.corpus) != 0:
                 return self.corpus
-        except:
+        except NameError:
             pass
 
         self.corpus = []
         for article in self.feed_object['entries']:
             try:
-                self.corpus.append({"title": article['title'],  # News titles
+                self.corpus.append({"title": article['title'],                    # News titles
                                     "summary": article['summary'].split("<")[0],  # payload (sans any HTML stuff)
                                     "date": article['published'],
-                                    "link": article['links'][0]['href'],  # associated links
+                                    "link": article['links'][0]['href'],          # associated links
                                     "source_url": self.source_url,
                                     "retrieval_timestamp": str(datetime.now())})
 
@@ -55,21 +55,22 @@ class RSSPump:
         try:
             if len(self.entities) != 0:
                 return self.entities
-        except:
+        except NameError:
             pass
 
         self.entities = []
         for story in self.corpus:
             try:
                 doc = nlp(story['title'] + " " + story['summary'])
-                ents = ",".join([x.label_ + ":" + x.text for x in doc.ents if x.label_ not in self.ignore_tags])
-            except:
-                ents="Failed"
+                entities = ",".join([x.label_ + ":" + x.text for x in doc.ents if x.label_ not in self.ignore_tags])
+            except Exception as e:
+                print("Error in nlp: ", e)
+                entities = "Failed"
 
-            self.entities.append({'source_url':story['source_url'],
-                                  'retrieval_timestamp':story['retrieval_timestamp'],
-                                  'title':story['title'],
-                                  'entities':ents})
+            self.entities.append({'source_url': story['source_url'],
+                                  'retrieval_timestamp': story['retrieval_timestamp'],
+                                  'title': story['title'],
+                                  'entities': entities})
         return self.entities
 
     def refresh(self):
@@ -83,6 +84,6 @@ class RSSPump:
             self.corpus = self.get_stories()
             self.entities = None
             self.entities = self.get_entities()
-        except Error as e:
-            return "Failed to refresh: "+e
+        except Exception as e:
+            return "Failed to refresh: " + str(e)
         return "Refreshed feed data."
