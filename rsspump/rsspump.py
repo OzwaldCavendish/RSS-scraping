@@ -9,7 +9,7 @@ import spacy
 import numpy as np
 from datetime import datetime
 
-# Load the english language model for spacy
+# Load the english language model for SpaCy
 import en_core_web_sm
 nlp = en_core_web_sm.load()
 
@@ -63,10 +63,26 @@ class RSSPump:
             try:
                 doc = nlp(story['title'] + " " + story['summary'])
                 ents = ",".join([x.label_ + ":" + x.text for x in doc.ents if x.label_ not in self.ignore_tags])
-
-                self.entities.append({'source_url':story['source_url'], 'title':story['title'], 'entities':ents})
-
             except:
-                self.entities.append({'source_url': story['source_url'], 'title': story['title'], 'entities': "Failed"})
+                ents="Failed"
 
+            self.entities.append({'source_url':story['source_url'],
+                                  'retrieval_timestamp':story['retrieval_timestamp'],
+                                  'title':story['title'],
+                                  'entities':ents})
         return self.entities
+
+    def refresh(self):
+        """
+        Re-scrape the feed and then reprocess everything.
+        Doesn't append, or save data - just wipes the object and starts afresh.
+        """
+        try:
+            self.feed_object = feedparser.parse(self.source_url)
+            self.corpus = None
+            self.corpus = self.get_stories()
+            self.entities = None
+            self.entities = self.get_entities()
+        except Error as e:
+            return "Failed to refresh: "+e
+        return "Refreshed feed data."
