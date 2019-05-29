@@ -18,10 +18,12 @@ class RSSPump:
     """ Instantiates a pump for a single RSS feed, connecting, downloading and parsing the text and entities from it."""
     def __init__(self, source_url):
         self.source_url = source_url
+        self.ignore_tags = ['CARDINAL', 'DATE', 'MONEY', 'ORDINAL', 'QUANTITY']
+        self.corpus = None
+        self.entities = None
         self.feed_object = feedparser.parse(self.source_url)
         self.corpus = self.get_stories()
         self.entities = self.get_entities()
-        self.ignore_tags = ['CARDINAL', 'DATE', 'MONEY', 'ORDINAL', 'QUANTITY']
 
     def get_stories(self):
         """ Takes all articles and extracts the useful content and metadata in an SQL friendly shape."""
@@ -29,7 +31,7 @@ class RSSPump:
         try:
             if len(self.corpus) != 0:
                 return self.corpus
-        except NameError:
+        except TypeError:
             pass
 
         self.corpus = []
@@ -55,7 +57,7 @@ class RSSPump:
         try:
             if len(self.entities) != 0:
                 return self.entities
-        except NameError:
+        except TypeError:
             pass
 
         self.entities = []
